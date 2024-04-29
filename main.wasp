@@ -1,0 +1,104 @@
+app greetingCardGenerator {
+  wasp: {
+    version: "^0.13.2"
+  },
+  title: "Lazy Greeting Cards",
+  client: {
+    rootComponent: import { App } from "@src/App"
+  },
+  auth: {
+    userEntity: User,
+    methods: {
+      google: {
+        userSignupFields: import { googleSignupFields } from "@src/auth",
+        configFn: import { getGoogleConfig } from "@src/auth"
+      }
+    },
+    onAuthFailedRedirectTo: "/"
+  },
+  db: {
+    system: PostgreSQL
+  }
+}
+
+route RootRoute { path: "/", to: MainPage }
+page MainPage {
+  component: import { MainPage } from "@src/pages/MainPage"
+}
+
+route GreetingCardRoute { path: "/greeting-card/:id", to: GreetingCardPage }
+page GreetingCardPage {
+  component: import { GreetingCardPage } from "@src/pages/GreetingCard"
+}
+
+entity User {=psl
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  avatar String
+
+  greetingCards GreetingCard[]
+psl=}
+
+entity GreetingCard {=psl
+  id String @id @default(cuid())
+  prompt String
+  status String @default("pending")
+  poem String?
+  imagePrompt String?
+  imageUrl String?
+  imageAverageColor String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  userId String
+psl=}
+
+action createGreetingCard {
+  fn: import { createGreetingCard } from "@src/cards/index",
+  entities: [GreetingCard]
+}
+
+query getMyGreetingCards {
+  fn: import { getMyGreetingCards } from "@src/cards/index",
+  entities: [GreetingCard]
+}
+
+query getGreetingCard {
+  fn: import { getGreetingCard } from "@src/cards/index",
+  entities: [GreetingCard]
+}
+
+job generateGreetingCardPoem {
+  executor: PgBoss,
+  perform: {
+    fn: import { generateGreetingCardPoem } from "@src/cards/index"
+  },
+  entities: [GreetingCard],
+  schedule: {
+    cron: "* * * * *" // every minute
+  }
+}
+
+job generateGreetingCardImage {
+  executor: PgBoss,
+  perform: {
+    fn: import { generateGreetingCardImage } from "@src/cards/index"
+  },
+  entities: [GreetingCard],
+  schedule: {
+    cron: "* * * * *" // every minute
+  }
+}
+
+job cleanUpStaleGreetingCards {
+  executor: PgBoss,
+  perform: {
+    fn: import { cleanUpStaleGreetingCards } from "@src/cards/index"
+  },
+  entities: [GreetingCard],
+  schedule: {
+    cron: "* * * * *" // every minute
+  }
+}
