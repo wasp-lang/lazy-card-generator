@@ -4,7 +4,7 @@
 #
 
 app = 'lazy-greeting-cards-server'
-primary_region = 'mad'
+primary_region = 'cdg'
 
 [build]
 
